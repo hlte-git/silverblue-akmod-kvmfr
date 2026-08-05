@@ -1,36 +1,33 @@
 ---
 # yaml-language-server: $schema=https://schema.blue-build.org/recipe-v1.json
-# image will be published to ghcr.io/<user>/<name>
 name: silverblue-akmod-kvmfr
-# description will be included in the image's metadata
 description: Latest Fedora Silverblue with Looking Glass KVMFR module
 
-# the base image to build on top of (FROM) and the version tag to use
 base-image: ghcr.io/ublue-os/silverblue-main
-image-version: latest # latest is also supported if you want new updates ASAP
+image-version: latest
 
-# module configuration, executed in order
-# you can include multiple instances of the same module
 modules:
   - type: files
     files:
       - source: system
-        destination: / # copies files/system/* (* means everything inside it) into your image's root folder /
+        destination: / 
 
   - type: rpm-ostree
     repos:
+      # Required for the kvmfr-kmod-common dependency
       - https://copr.fedorainfracloud.org/coprs/hikariknight/looking-glass-kvmfr/repo/fedora-%OS_VERSION%/hikariknight-looking-glass-kvmfr-fedora-%OS_VERSION%.repo
-      
-  - type: akmods
-    install:
-      - kvmfr
-  
+
+  # Replace the standard 'akmods' module with a containerfile module 
+  # to fetch the RPM directly from the ublue-os extra stream
+  - type: containerfile
+    snippets:
+      - COPY --from=ghcr.io/ublue-os/akmods-extra:main-%OS_VERSION% /rpms /tmp/akmods-extra-rpms
+      - RUN rpm-ostree install /tmp/akmods-extra-rpms/kmods/*kvmfr*.rpm
+
   - type: dnf
     remove:
       packages:
-        # example: removing firefox (in favor of the flatpak)
-        # "firefox" is the main package, "firefox-langpacks" is a dependency
         - firefox
-        - firefox-langpacks # also remove firefox dependency (not required for all packages, this is a special case)
+        - firefox-langpacks 
         
-  - type: signing # this sets up the proper policy & signing files for signed images to work fully
+  - type: signing
