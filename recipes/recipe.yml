@@ -21,8 +21,13 @@ modules:
   # to fetch the RPM directly from the ublue-os extra stream
   - type: containerfile
     snippets:
-      - COPY --from=ghcr.io/ublue-os/akmods-extra:main-%OS_VERSION% /rpms /tmp/akmods-extra-rpms
-      - RUN rpm-ostree install /tmp/akmods-extra-rpms/kmods/*kvmfr*.rpm
+      - COPY --from=ghcr.io/ublue-os/akmods:${KERNEL_FLAVOR}-${FEDORA_MAJOR_VERSION} /rpms /tmp/akmods-rpms
+      - COPY --from=ghcr.io/ublue-os/akmods-extra:${KERNEL_FLAVOR}-${FEDORA_MAJOR_VERSION} /rpms /tmp/akmods-rpms
+      - RUN sed -i 's@enabled=0@enabled=1@g' /etc/yum.repos.d/_copr_ublue-os-akmods.repo && \
+      wget https://copr.fedorainfracloud.org/coprs/hikariknight/looking-glass-kvmfr/repo/fedora-"${FEDORA_MAJOR_VERSION}"/hikariknight-looking-glass-kvmfr-fedora-"${FEDORA_MAJOR_VERSION}".repo -O /etc/yum.repos.d/hikariknight-looking-glass-kvmfr-fedora-"${FEDORA_MAJOR_VERSION}".repo && \
+    rpm-ostree install \
+        /tmp/akmods-rpms/kmods/*kvmfr*.rpm && \
+    ostree container commit
 
   - type: dnf
     remove:
